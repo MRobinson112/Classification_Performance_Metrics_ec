@@ -1,0 +1,75 @@
+---
+title: "extra credit"
+author: "Michael Robinson"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Classification Performance Metrics }
+# Classification Performance Metrics Analysis
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Read the classification model performance data
+
+CMP <- read.csv("~/Downloads/classification_model_performance.csv", header = TRUE, stringsAsFactors = FALSE)
+
+# Calculate Null Error Rate
+most_frequent_class <- names(which.max(table(CMP$class))) 
+null_error_rate <- sum(CMP$class != most_frequent_class) / nrow(CMP) 
+
+# Plot Class Distribution
+ggplot(CMP, aes(x=factor(class), fill=factor(class))) + 
+  geom_bar() +
+  labs(x ="Target", y = "Count")
+
+# Analyze performance for each Thresholds
+thresholds <- c(0.2, 0.5, 0.8)
+outcome <- data.frame(threshold=double(), TP=numeric(), FP=numeric(), TN=numeric(), FN=numeric())
+
+for (tresh_samp in thresholds) {
+  predicted <- ifelse(CMP$scored.probability > tresh_samp, 1, 0)
+  TP <- sum(predicted == 1 & CMP$class == 1)
+  FP <- sum(predicted == 1 & CMP$class == 0)
+  TN <- sum(predicted == 0 & CMP$class == 0)
+  FN <- sum(predicted == 0 & CMP$class == 1)
+  
+  outcome <- rbind(outcome, data.frame(threshold=tresh_samp, TP=TP, FP=FP, TN=TN, FN=FN))
+}
+
+print(outcome)
+
+# Calculate Performance Metrics for Each Threshold
+performance_metrics <- data.frame(threshold=double(), Accuracy=double(), Precision=double(), Recall=double(), F1_Score=double())
+
+for (i in 1:nrow(outcome)) {
+  TP <- outcome$TP[i]
+  FP <- outcome$FP[i]
+  TN <- outcome$TN[i]
+  FN <- outcome$FN[i]
+  
+  Accuracy <- (TP + TN) / (TP + FP + TN + FN)
+  Precision <- TP / (TP + FP)
+  Recall <- TP / (TP + FN)
+  F1_Score <- 2 * (Precision * Recall) / (Precision + Recall)
+  
+  performance_metrics <- rbind(performance_metrics, data.frame(threshold=outcome$threshold[i], Accuracy=Accuracy, Precision=Precision, Recall=Recall, F1_Score=F1_Score))
+}
+
+print(performance_metrics)
+
+```
+# Question 4: 
+(a) I would think an 0.2 scored probability threshold would be preferable use in a more in situations where missing a positive case has extreme consequences like in the medical fields.
+(b) an 0.8 scored probability threshold would be preferable when opting for fewer but more certain positive predictions like credit card company
+
